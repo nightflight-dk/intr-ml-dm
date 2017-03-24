@@ -1,0 +1,216 @@
+---
+title: 'Report 2'
+subtitle: 'Supervised learning: Classification and regression'
+author: 
+- Mathias Husted Torp, s133547
+- Damian Kowalczyk, s166071
+date: April 4th, 2017
+output:
+  pdf_document:
+    fig_caption: yes
+    number_sections: yes
+    template: custom.tex
+geometry: margin=1in
+header-includes:
+  - \renewcommand{\familydefault}{\sfdefault}
+  - \usepackage{fancyhdr}
+  - \usepackage{graphicx}
+  - \pagestyle{fancy}
+  - \fancyhead[R]{\thetitle}
+  - \fancyfoot[C]{}
+  - \fancyfoot[R]{\thepage}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(knitr)
+source("../Project/load-data.R")
+
+featuresmpg <- c('normalized-losses', 'fuel-type', 'aspiration', 'drive-wheels', 'wheel-base', 'curb-weight', 'num-of-cylinders', 'engine-size', 'compression-ratio', 'horsepower', 'peak-rpm', 'city-mpg', 'price')
+
+features_hp <- c('normalized-losses', 'wheel-base', 'length', 'width', 'bore', 'price', 'make.jaguar', 'make.mercedes-benz', 'make.porsche', 'aspiration.turbo', 'wheel-base', 'curb-weight', 'num-of-cylinders', 'engine-size',  'engine.type.dohc', 'engine.type.ohcy', 'horsepower', 'engine.location.rear','drive.wheels.rwd', 'fuel.system.mpfi')
+
+c(dat, names, NAs) := loaddata(normalise = FALSE, removeNAs = FALSE, oneofKenc = FALSE)
+
+```
+
+# Classification
+This part of the report will be about classifying the cars into discrete groups. Specifically, it will focus on classifying the cars into four categories of the average gas consumption per mile driven, which is a new feature based on the 'city-mpg' feature. The feature is generated based on the following rules:
+
+- Very low = city-mpg <= Q1
+- Low = Q1 < city-mpg <= median
+- High = median < city-mpg <= Q3
+- Very high = Q3 < city-mpg
+
+Where Q1 means the lower quartile and Q3 means the upper quartile. The number of observations in each category is shown in Table \ref{tab:freq}.
+
+```{r Feature definition}
+y <- dat[["city-mpg"]]
+dat <- dat[-which(names(dat) %in% c("city-mpg","highway-mpg"))]
+class_names <- c("Very low", "Low", "High", "Very high")
+
+yclass = factor(length(y), levels = 1:4, labels = class_names, ordered = FALSE)
+yclass[y <= quantile(y,0.25)] <- class_names[1]
+yclass[quantile(y,0.25) < y & y <= median(y)] <- class_names[2]
+yclass[median(y) < y & y <= quantile(y,0.75)] <- class_names[3]
+yclass[quantile(y,0.75) < y] <- class_names[4]
+
+kable(t(as.matrix(table(yclass))), caption = "\\label{tab:freq}The number of observations in each of the categories of the discrete city-mpg feature.")
+```
+
+When applying the machine learning methods, neither the discrete nor the continuous version of the 'city-mpg' feature will be in the data set, just as the feature 'highway-mgp' is excluded as well. In the hope of improving the performance of the machine learning methods, a subset of features, which are intuitively believed to influence the fuel economy, was selected by hand. This subset of the data set is in the following sections compared to the full data set.
+
+## Decision trees
+```{r Decision trees, fig.cap='\\label{fig:tree}The final decision tree model used in the performance comparison.'}
+#### Format Data ####
+# Data matrix
+X <- dat
+# Number of observations
+N <- nrow(dat)
+# Attribute (Feature) Names
+attributeNames <- attributeNames <- gsub('-', '.', names(dat))
+colnames(X) <- attributeNames
+# Number of features
+M <- ncol(dat)
+# Vector y
+y <- as.integer(yclass)
+# No. of categories in vector y
+C <- length(unique(yclass))
+# Class names of vector y
+classNames <- class_names
+
+#### Fit tree ####
+library(rpart)
+library(rpart.plot)
+classassignments <- classNames[y]
+
+# construct formula to fit automatically to avoid typing in each variable name
+fmla <- as.formula(paste("classassignments ~ ", paste(attributeNames, collapse= "+")))
+
+# fit classification tree
+mytree <- rpart(fmla, data=X,control=rpart.control(minsplit=20, minbucket=5, cp=0), parms=list(split='deviance'), method="class")
+
+# Two split methods: c('gini', 'deviance)')
+# Three continuous parameters: minsplit, minbucket and cp
+
+#### Plot ####
+rpart.plot(mytree, tweak = 1)
+
+#### Predict ####
+## Define a new data object with the attributes given in the text
+# x = data.frame(t(c(6.9, 1.09, .06, 2.1, .0061, 12, 31, .99, 3.5, .44, 12)))
+# colnames(x) <- attributeNames
+## Evaluate the classification tree for the new data object
+# predict(mytree, newdat=x)
+
+```
+
+<!-- Try and analyze your data in terms of a classification problem solved by decision
+trees and logistic regression.
+If your data has multiple classes you can for now consider analyzing two classes at a time
+when applying logistic regression - we will later in the course learn how logistic
+regression can be generalized to multiple classes. -->
+
+## Logistic/Multinomial Regression
+```{r Regression}
+# Fit logistic regression model to predict the type of wine
+y <- integer(length(yclass))
+y[yclass %in% c("High", "Very high")] <- 1
+xnam <- paste("X", 1:(dim(X)[2]), sep="")
+colnames(X) <- xnam
+fmla <- as.formula(paste("y ~ ", paste(xnam, collapse= "+")))
+yX = data.frame(cbind(y,X))
+#w_est = glm(fmla, family=binomial(link="logit"), data=yX)
+
+## Define a new data object with the attributes given in the text
+#x = data.frame(cbind(6.9, 1.09, .06, 2.1, .0061, 12, 31, .99, 3.5, .44, 12))
+#colnames(x) <- xnam
+
+## Evaluate the logistic regression for the new data object
+#p = predict(w_est, newdata=x, type="response")
+```
+
+```{r Multinomial}
+source("setup.R")
+library(nnet) #install.packages("mlogit")
+
+#### Format Data ####
+# Data matrix
+X <- dat
+# Number of observations
+N <- nrow(dat)
+# Attribute (Feature) Names
+attributeNames <- attributeNames <- gsub('-', '.', names(dat))
+colnames(X) <- attributeNames
+# Number of features
+M <- ncol(dat)
+# Vector y
+y <- as.integer(yclass)
+# No. of categories in vector y
+C <- length(unique(yclass))
+# Class names of vector y
+classNames <- class_names
+
+#### Perform analysis ####
+X_train <- dat$X.train
+N_train <- dat$N.train
+y_train<- dat$y.train
+
+X_test <- dat$X.test
+N_test <- dat$N.test
+y_test <- dat$y.test
+# substitute spaces with dots to make handling of columns in data matrix easier
+attributeNames <- gsub(' ', '.', attributeNames)
+X_traindf <- data.frame(X_train)
+colnames(X_traindf) <- attributeNames
+X_testdf <- data.frame(X_test)
+colnames(X_testdf) <- attributeNames
+
+## Fit multinomial regression model
+Y_train=factor(y_train)
+Y_test=factor(y_test)
+
+(fmla <- as.formula(paste("y_train ~ ", paste(attributeNames, collapse= "+"))))
+model <- multinom(formula=fmla, data=X_traindf)
+    
+## Compute results on test data
+# Get the predicted output for the test data
+Y_test_est = predict(object=model, newdata=X_testdf, type='probs')
+
+# Compute the class index by finding the class with highest probability from the multinomial regression model
+y_ <- apply(Y_test_est, 1, max)
+y_test_est <- apply(Y_test_est, 1, which.max)
+# Subtract one to have y_test_est between 0 and C-1
+y_test_est = y_test_est-1;
+
+# Compute error rate
+ErrorRate = sum(y_test!=y_test_est)/N_test;
+print(paste('Error rate: ', ErrorRate*100, '%', sep=''));
+
+## Plot results
+# Display decision boundaries
+predictionFunction <- function(Xgriddf, model){
+Y_test_est <- predict(object=model, newdata=Xgriddf, type='probs')
+y_test_est <- max_idx(Y_test_est);
+y_test_est
+}
+
+dbplot(X_testdf, attributeNames, predictionFunction, y=y_test, contourLevels=0.5, contourCols='white', model=model)
+```
+
+## K-Nearest Neighbors (KNN)
+```{r K-Nearest Neighbors}
+
+```
+
+## Naïve Bayes
+```{r Naïve Bayes}
+
+```
+
+## Artificial Neural Networks (ANN)
+```{r Artificial Neural Networks}
+
+```
+
+## Prediction performance comparison
