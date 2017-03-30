@@ -432,6 +432,11 @@ plot(colSums(Error)/sum(CV$TestSize)*100, main='Classification', xlab='Number of
 rm(list=ls())
 source("setup.R")
 library(nnet) # install.packages('nnet')
+library(doSNOW)
+library(foreach)
+
+cl<-makeCluster(3) #change the 2 to your number of CPU cores
+registerDoSNOW(cl)
 
 # Load data
 source("../Project/load-data.R")
@@ -465,17 +470,17 @@ C <- length(unique(yclass))
 classNames <- class_names
 
 # Extract training and test set
-K = 5
+K = 10
 CV <- cvFolds(N, K=K);
 
 # Artificial Neural Network parameters
-L = 30; # Maximum number of hidden neurons
+L = 40; # Maximum number of hidden neurons
 
 # Variable for classification error
 Error = array(rep(NA, times=K*L), dim=c(K,L))
 
 for(k in 1:K){ # For each crossvalidation fold
-    print(paste('Crossvalidation fold ', k, '/', K, sep=''))
+    print(paste0('Crossvalidation fold ', k, '/', K))
 
     # Extract training and test set
 	X_train <- X[CV$which!=k, ];
@@ -493,8 +498,8 @@ for(k in 1:K){ # For each crossvalidation fold
 	X_testdf <- data.frame(X_test)
 	colnames(X_testdf) <- attributeNames
 
-	for(l in 1:L){ # For each number of neighbors
-        print0(paste('Number if hidden neurons ', l, '/', L))
+	for(l in 20:L){ # For each number of neighbors
+        print(paste0('Number of hidden neurons ', l, '/', L))
         # Parameters for neural network classifier
 		NHiddenUnits = l;  # Number of hidden units
 		## Fit multiclass neural network to training set
@@ -514,6 +519,8 @@ for(k in 1:K){ # For each crossvalidation fold
         Error[k,l] = sum(y_test!=y_test_est); # Count the number of errors
 	}
 }
+
+stopCluster(cl)
 
 ## Plot the classification error rate
 plot(colSums(Error)/sum(CV$TestSize)*100, main='Classification', xlab='Number of hidden neurons', ylab='Classification error rate (%)', pch=20, type='l');
