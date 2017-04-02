@@ -7,6 +7,10 @@ graphics.off()
 
 cars <- data.frame(dat)
 
+# immediately discard features without significant correlation with horsepower
+# highcor <- which(cor(cars)['horsepower',]>0.4)
+# cars<-cars[highcor]
+
 y <- cars$horsepower
 X <- cars[,!(names(cars) == "horsepower")]
 N <- nrow(cars)

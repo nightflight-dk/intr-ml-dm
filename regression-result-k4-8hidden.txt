@@ -1,0 +1,30 @@
+result for 4 fold (K=4), 8 hidden layers (ANN)
+
+> # Display results
+> print('Linear regression without feature selection:')
+[1] "Linear regression without feature selection:"
+> print(paste('- Training error:', sum(Error_train)/sum(CV$TrainSize)));
+[1] "- Training error: 0.0176724245498092"
+> print(paste('- Test error:', sum(Error_test)/sum(CV$TestSize)));
+[1] "- Test error: 0.117473885588138"
+> 
+> print('Linear regression with sequential feature selection:');
+[1] "Linear regression with sequential feature selection:"
+> print(paste('- Training error:', sum(Error_train_fs)/sum(CV$TrainSize)));
+[1] "- Training error: 0.0632529451355094"
+> print(paste('- Test error:', sum(Error_test_fs)/sum(CV$TestSize)));
+[1] "- Test error: 0.107753758847163"
+> 
+> print('Artificial neural network:');
+[1] "Artificial neural network:"
+> print(paste('- Training error:', sum(Error_train_ann)/sum(CV$TrainSize)));
+[1] "- Training error: 0.000180388542260615"
+> print(paste('- Test error:', sum(Error_test_ann)/sum(CV$TestSize)));
+[1] "- Test error: 5.74203719166583"
+> 
+> print('Dumb mean HP prediction:');
+[1] "Dumb mean HP prediction:"
+> print(paste('- Training error:', sum(Error_train_mean)/sum(CV$TrainSize)));
+[1] "- Training error: 0.983124109600388"
+> print(paste('- Test error:', sum(Error_test_mean)/sum(CV$TestSize)));
+[1] "- Test error: 1.00104455673203"

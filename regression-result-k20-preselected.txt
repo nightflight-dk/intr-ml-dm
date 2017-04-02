@@ -1,0 +1,32 @@
+result for 20 X validation (K=20) -- forward selection still worthless, ANN takes hit
+
+>>> Only top 12 features with high correlation  -- looks like only gained on speed
+
+> # Display results
+> print('Linear regression without feature selection:')
+[1] "Linear regression without feature selection:"
+> print(paste('- Training error:', sum(Error_train)/sum(CV$TrainSize)));
+[1] "- Training error: 0.182394334781437"
+> print(paste('- Test error:', sum(Error_test)/sum(CV$TestSize)));
+[1] "- Test error: 0.272264737127482"
+> 
+> print('Linear regression with sequential feature selection:');
+[1] "Linear regression with sequential feature selection:"
+> print(paste('- Training error:', sum(Error_train_fs)/sum(CV$TrainSize)));
+[1] "- Training error: 0.182571703870692"
+> print(paste('- Test error:', sum(Error_test_fs)/sum(CV$TestSize)));
+[1] "- Test error: 0.260485784743001"
+> 
+> print('Artificial neural network:');
+[1] "Artificial neural network:"
+> print(paste('- Training error:', sum(Error_train_ann)/sum(CV$TrainSize)));
+[1] "- Training error: 0.0945054535496254"
+> print(paste('- Test error:', sum(Error_test_ann)/sum(CV$TestSize)));
+[1] "- Test error: 28.4469536504335"
+> 
+> print('Dumb mean HP prediction:');
+[1] "Dumb mean HP prediction:"
+> print(paste('- Training error:', sum(Error_train_mean)/sum(CV$TrainSize)));
+[1] "- Training error: 0.985076024636728"
+> print(paste('- Test error:', sum(Error_test_mean)/sum(CV$TestSize)));
+[1] "- Test error: 0.99666324777878"
