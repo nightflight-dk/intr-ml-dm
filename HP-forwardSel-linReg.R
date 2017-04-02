@@ -59,26 +59,6 @@ hpANN <- function(X_train, y_train, X_test, y_test){
   sum((unlist(netwrk$net.result)-y_test)^2)
 }
 
-# ## Crossvalidation
-# # Create crossvalidation partition for evaluation
-# # using stratification and 50 pct. split between training and test 
-# set.seed(1234) # for reproducibility
-# CV <- cvFolds(nrow(cars), K=2)
-# # set up vectors that will store sizes of training and test sizes
-# CV$TrainSize <- c()
-# CV$TestSize <- c()
-# 
-# # Extract the training and test sets, retaining only the attributes that are to be kept
-# X_train <- X[CV$which!=1, ];
-# y_train <- Y[CV$which!=1];
-# X_test <- X[CV$which==2, ];
-# y_test <- Y[CV$which==2];
-# CV$TrainSize[1] <- length(y_train)
-# CV$TestSize[2] <- length(y_test)
-# 
-# hpLinreg(X_train, y_train, X_test, y_test)
-# hpANN(X_train, y_train, X_test, y_test)
-
 ## Crossvalidation
 # Create crossvalidation partition for evaluation
 K = 5;
@@ -94,6 +74,8 @@ Error_train <- matrix(rep(NA, times=K), nrow=K)
 Error_test <- matrix(rep(NA, times=K), nrow=K)
 Error_train_fs <- matrix(rep(NA, times=K), nrow=K)
 Error_test_fs <- matrix(rep(NA, times=K), nrow=K)
+Error_train_ann <- matrix(rep(NA, times=K), nrow=K)
+Error_test_ann <- matrix(rep(NA, times=K), nrow=K)
 
 # For each crossvalidation fold
 for(k in 1:K){
@@ -106,21 +88,27 @@ for(k in 1:K){
   y_test <- y[CV$which==k];
   CV$TrainSize[k] <- length(y_train)
   CV$TestSize[k] <- length(y_test)
-  
+
   # Use 10-fold crossvalidation for sequential feature selection
   fsres <- forwardSelection(hpLinreg, X_train, y_train, nfeats=10);
 
   # Extract selected features from the forward selection routing
   selected.features <- fsres$featsIncluded
-  
+
   # Save the selected features
-  Features[k,] = fsres$binaryFeatsIncluded    
+  Features[k,] = fsres$binaryFeatsIncluded
+  
   # Compute squared error without feature subset selection
   Error_train[k] = hpLinreg(X_train, y_train, X_train, y_train);
   Error_test[k] = hpLinreg(X_train, y_train, X_test, y_test);
+  
   # Compute squared error with feature subset selection
   Error_train_fs[k] = hpLinreg(X_train[,selected.features], y_train, X_train[,selected.features], y_train);
   Error_test_fs[k] = hpLinreg(X_train[,selected.features], y_train, X_test[,selected.features], y_test);
+  
+  # Compute squared error with ANN
+  Error_train_ann[k] = hpANN(X_train, y_train, X_train, y_train);
+  Error_test_ann[k] = hpANN(X_train, y_train, X_test, y_test);
   
   # Show variable selection history
   # mfig(sprintf('(%d) Feature selection',k));
@@ -130,34 +118,7 @@ for(k in 1:K){
   plot(fsres$costs, xlab='Iteration', ylab='Squared error (crossvalidation)', main='Value of error criterion');
   # Plot feature selection sequence
   bmplot(attributeNames, 1:I, fsres$binaryFeatsIncludedMatrix);
-  
-  # ############ ANN
-  # 
-  # # Use 10-fold crossvalidation for sequential feature selection
-  # fsres <- forwardSelection(hpANN, X_train, y_train, nfeats=10);
-  # 
-  # # Extract selected features from the forward selection routing
-  # selected.features <- fsres$featsIncluded
-  # 
-  # # Save the selected features
-  # Features[k,] = fsres$binaryFeatsIncluded    
-  # # Compute squared error without feature subset selection
-  # Error_train[k] = hpANN(X_train, y_train, X_train, y_train);
-  # Error_test[k] = hpANN(X_train, y_train, X_test, y_test);
-  # # Compute squared error with feature subset selection
-  # Error_train_fs[k] = hpANN(X_train[,selected.features], y_train, X_train[,selected.features], y_train);
-  # Error_test_fs[k] = hpANN(X_train[,selected.features], y_train, X_test[,selected.features], y_test);
-  # 
-  # # Show variable selection history
-  # # mfig(sprintf('(%d) Feature selection',k));
-  # I = length(fsres$costs) # Number of iterations
-  # par(mfrow=c(1,2))
-  # # Plot error criterion
-  # plot(fsres$costs, xlab='Iteration', ylab='Squared error (crossvalidation)', main='Value of error criterion');
-  # # Plot feature selection sequence
-  # bmplot(attributeNames, 1:I, fsres$binaryFeatsIncludedMatrix);
 }
-
 
 # Display results
 print('Linear regression without feature selection:')
@@ -167,6 +128,10 @@ print(paste('- Test error:', sum(Error_test)/sum(CV$TestSize)));
 print('Linear regression with sequential feature selection:');
 print(paste('- Training error:', sum(Error_train_fs)/sum(CV$TrainSize)));
 print(paste('- Test error:', sum(Error_test_fs)/sum(CV$TestSize)));
+
+print('Artificial neural network:');
+print(paste('- Training error:', sum(Error_train_ann)/sum(CV$TrainSize)));
+print(paste('- Test error:', sum(Error_test_ann)/sum(CV$TestSize)));
 
 # # Show the selected features
 dev.off()
