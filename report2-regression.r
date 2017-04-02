@@ -76,6 +76,8 @@ Error_train_fs <- matrix(rep(NA, times=K), nrow=K)
 Error_test_fs <- matrix(rep(NA, times=K), nrow=K)
 Error_train_ann <- matrix(rep(NA, times=K), nrow=K)
 Error_test_ann <- matrix(rep(NA, times=K), nrow=K)
+Error_train_mean <- matrix(rep(NA, times=K), nrow=K)
+Error_test_mean <- matrix(rep(NA, times=K), nrow=K)
 
 # For each crossvalidation fold
 for(k in 1:K){
@@ -110,6 +112,11 @@ for(k in 1:K){
   Error_train_ann[k] = hpANN(X_train, y_train, X_train, y_train);
   Error_test_ann[k] = hpANN(X_train, y_train, X_test, y_test);
   
+  # Compute squared error with mean HP
+  meanHp <- mean(y_train)
+  Error_train_mean[k] = sum((y_train-meanHp)^2)  
+  Error_test_mean[k] = sum((y_test-meanHp)^2)
+  
   # Show variable selection history
   # mfig(sprintf('(%d) Feature selection',k));
   I = length(fsres$costs) # Number of iterations
@@ -132,6 +139,10 @@ print(paste('- Test error:', sum(Error_test_fs)/sum(CV$TestSize)));
 print('Artificial neural network:');
 print(paste('- Training error:', sum(Error_train_ann)/sum(CV$TrainSize)));
 print(paste('- Test error:', sum(Error_test_ann)/sum(CV$TestSize)));
+
+print('Dumb mean HP prediction:');
+print(paste('- Training error:', sum(Error_train_mean)/sum(CV$TrainSize)));
+print(paste('- Test error:', sum(Error_test_mean)/sum(CV$TestSize)));
 
 # # Show the selected features
 dev.off()
