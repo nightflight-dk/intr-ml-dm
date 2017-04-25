@@ -7,7 +7,9 @@ library(mclust) # install.packages("mclust") # package that can be used to fit a
 
 graphics.off()
 
-cars <- data.frame(dat)
+c(dat, X, names, NAs) := loaddata(normalise = TRUE, removeNAs = TRUE, oneofKenc = TRUE)
+
+cars <- data.frame(X)
 
 X <- cars
 y <- cars$powerclass
@@ -117,11 +119,14 @@ for(t in 1:T){
 }
 
 ## Plot results
+pdf("../GMM-crossval.pdf",width = 6, height = 4.5)
 cols <- c('blue', 'darkgreen', 'red')
 miny <- min(c(BIC, AIC, 2*CVE))
 maxy <- max(c(BIC, AIC, 2*CVE))
-plot(c(KRange[1], KRange[length(KRange)]), c(miny, maxy), main='GMM: Number of clusters', xlab='K')
-points(KRange, BIC, col=cols[1]);
-points(KRange, AIC, col=cols[2]);
-points(KRange, 2*CVE, col=cols[3]);
-legend('topright', legend=c('BIC', 'AIC', 'Crossvalidation'), fill=cols);
+plot(c(KRange[1], KRange[length(KRange)]), c(miny, maxy),
+     ylab='Log-likelihood', main='GMM: Number of clusters', xlab='K', type='n')
+points(KRange, BIC, col=cols[1], pch=16)
+points(KRange, AIC, col=cols[2], pch=16)
+points(KRange, 2*CVE, col=cols[3], pch=16)
+legend('topleft', legend=c('BIC', 'AIC', 'Crossvalidation'), fill=cols, bg = 'white')
+dev.off()
