@@ -1,0 +1,170 @@
+---
+title: 'Report 3: Automobiles data set'
+subtitle: 'Unsupervised learning: Clustering and density estimation'
+author:
+- Mathias Husted Torp, s133547
+- Damian Kowalczyk, s166071
+date: "May 2nd, 2017"
+geometry: margin=1in
+output:
+  pdf_document:
+    fig_caption: yes
+    fig_height: 3.5
+    number_sections: yes
+    template: custom.tex
+header-includes: |
+  \renewcommand{\familydefault}{\sfdefault}
+  \usepackage{booktabs}
+  \usepackage{graphicx}
+  \usepackage{titleps}
+  \newpagestyle{main}{
+    \setheadrule{.4pt}% Header rule
+    \sethead{\toptitlemarks\MakeUppercase{\sectiontitle}}% left
+      {}%                 center
+      {\thetitle}%    right
+    \setfoot{}% left
+      {}% center
+      {\thepage{}}% right
+  }
+  \pagestyle{main}
+---
+
+```{r setup, include = FALSE}
+rm(list=ls())
+library(knitr)
+opts_chunk$set(cache = TRUE, echo = FALSE, fig.pos = 'htbp', out.extra = '')
+opts_knit$set(root.dir = '../02450Toolbox_R', progress = FALSE)
+
+source("../Project/load-data.R")
+
+plotcol <- "dodgerblue2"
+
+```
+
+```{r Source Setup.R}
+source("setup.R")
+```
+
+
+<!--
+The report should be 5-10 pages long including ﬁgures and tables and give a precise and coherent account of the results of the clustering, association mining and outlier detection methods applied on your data. Please hand in the report no later than 2 May at 13:00.
+-->
+
+# Clustering
+Damian will absolutely nail this part
+
+# Outlier detection
+```{r Define attributes}
+selectedattributes <- c("symboling","make","body-style","bore", "horsepower","highway-mpg","price")
+```
+It is possible to identify possible outliers through the density distribution of the data. In practice, the density of each data point is calculated, and the points with the lowest densities have the highest probability of being outliers.
+
+## Gaussian Kernel density
+The first method used in this report is the Gaussian Kernel Density estimator, which estimates the Gaussian Kernel Density using a specified width. The optimal width for describing the data set is found using cross-validation. The results are shown in Figure \ref{fig:GaussDen}.
+
+```{r Kernel-Density-Estimation, fig.pos='hpb', fig.cap='\\label{fig:GaussDen}Outlier detection using Gaussian Kernel Density Estimator. The log(density) is used, because there is a very large difference in densities between the points.'}
+c(dat, X, names, NAs) := loaddata(normalise = T, removeNAs = T, oneofKenc = T)
+source("../Report 3/KernelDensityEstimation-better.R")
+suppressMessages( y <- KernelDensityEstimation(X) )
+
+# Plot density estimate outlier scores
+par(mar=c(4.0,4.1,4.1,0))
+barplot(log(y[1:20]), main='Outlier score', las = 2, col = plotcol, ylab="Log(Density)", xlab="Index")
+ix <- as.numeric(names(y))
+```
+
+Based on estimated densities, some possible outliers are: `r ix[1:4]`. These correspond to: The top Jaguar, the top Porsche, a pretty standard Saab with a perhaps mistyped bore, and a very risky (symboling 3) convertible Mercedes Benz. Further details about the outliers are in Table \ref{tab:GaussDen}.
+
+```{r KDE-outliers-table}
+options(knitr.kable.NA = 'N/A')
+kable(dat[ix[1:8],selectedattributes], caption = "\\label{tab:GaussDen}The eight data points with the lowest density as predicted by the Gaussian Kernel Density Estimator. The presented points correspond to the eight left most bars in Figure \\ref{fig:GaussDen}", format = "latex", booktabs = TRUE)
+```
+
+## KNN density
+The second method used for predicting outliers in this report is the K nearest neighbor density. Using this method, a free parameter, K, indicating the number of neigbors used to estimate the density must be set. Here, K = 30 is chosen, corresponding to about `r round(30/nrow(X)*100, 1)` % of the data set. The results can be seen in Figure \ref{fig:KNNden}.
+
+```{r Nearest-Neighbor-density, fig.cap='\\label{fig:KNNden}Outlier detection using KNN Density Estimator.'}
+c(dat, X, names, NAs) := loaddata(normalise = T, removeNAs = T, oneofKenc = T)
+source("../Report 3/KNN-density.R")
+y <- KNNdensity(X)
+
+# Plot density estimate outlier scores
+par(mar=c(4.1,4.1,4.1,0))
+barplot(y[1:20], main='Outlier score', ylab="Density", las = 2, col = plotcol, xlab="Index")
+ix <- as.numeric(names(y))
+```
+
+Based on estimated densities, some possible outliers are: `r ix[1:4]`. A table of the top eight outliers is seen in Table \ref{tab:KNNden}.
+
+```{r KNN-outliers-table}
+options(knitr.kable.NA = 'N/A')
+kable(dat[ix[1:8],selectedattributes], caption = "\\label{tab:KNNden}The eight data points with the lowest density as predicted using the KNN Density Estimator. The presented points correspond to the eight left most bars in Figure \\ref{fig:KNNden}", format = "latex", booktabs = TRUE)
+```
+
+
+## KNN average relative density
+The third method used to identify possible outliers is the KNN average relative density. This method is better suited for identifying outliers, when cluster densities differ a lot. Again, K is set to 30. The results can be seen in Figure \ref{fig:KNNavgden}.
+
+```{r KNN-Average-Relative-density, fig.cap='\\label{fig:KNNavgden}Outlier detection using KNN Average Relative Density.'}
+source("../Report 3/KNN-AvgDensity.R")
+y <- KNNAvgDensity(X)
+
+# Plot density estimate outlier scores
+par(mar=c(4.1,4.1,4.1,0))
+barplot(y[1:20], main='Outlier score', ylab="Average Relative Density", las = 2, col = plotcol)
+ix <- as.numeric(names(y))
+```
+
+Based on estimated densities, some possible outliers are: `r ix[1:3]`. A table of the top eight outliers is seen in Table \ref{tab:KNNavgden}.
+
+```{r KNN-Average-Density-outliers-table}
+options(knitr.kable.NA = 'N/A')
+kable(dat[ix[1:8],selectedattributes], caption = "\\label{tab:KNNavgden}The eight data points with the lowest density as predicted using the KNN Average Relative Density Estimator. The presented points correspond to the eight left most bars in Figure \\ref{fig:KNNavgden}", format = "latex", booktabs = TRUE)
+```
+
+Most of the predicted outlier cars seem to be 'natural outliers' in the meaning, that they differ significantly from the other cars, but this is not due to data error or something wrong, but simply because they are meant to be different. This includes observation 50, 130 and 73-75. However, it seems that there may be a typo in the bore ratio of observation 135. This is a Saab that is almost identical to the other Saabs, but it has a bore ratio exactly 1.00 below the bore of the other Saabs. This can be seen in Table \ref{tab:saab}.
+
+```{r Saab}
+kable(dat[which(dat$make == 'saab'),selectedattributes], caption = "\\label{tab:saab}Comparison of all the Saabs in the data set. It seems that there is a typo in the bore of observation 135.")
+```
+
+
+# Association mining
+
+This part of the report focuses on association mining. Many different endresults are possible depending on what is chosen in the process. Here, categorical variables are binarized using One-out-of-K-encoding, and continuous variables are binarized by splitting on the median, where observations equal to the median belong to the 'High'-group.
+
+This leaves a data set consisting entirely of zeros and ones. Now, the number of high support item sets should be indirectly chosen through a minimum support value, and the number of association sets should be indirectly chosen through a minimum confidence value. 
+
+```{r Write Apriori, eval=FALSE, include=FALSE}
+c(dat, X, names, NAs) := loaddata(normalise = F, removeNAs = T, oneofKenc = T, binarize = T)
+source("Tools/Apriori/writeAprioriFile.R")
+writeAprioriFile(X, "../Report 3/Apriori.txt")
+```
+
+
+```{r Run Aprori, include=FALSE, cache=FALSE}
+c(dat, X, names, NAs) := loaddata(normalise = F, removeNAs = T, oneofKenc = T, binarize = T)
+source("Tools/Apriori/runApriori.R")
+minsupp = 80
+minconf = 80
+apri = runApriori("../Report 3/Apriori.txt", minsupp, minconf)
+```
+
+The minimum support is set to `r minsupp` %, which leads to `r length(apri$FreqItemSets)` frequent item sets. These can be seen in Table \ref{tab:itemsets}. Furthermore, the minimum confidence is set to `r minconf` %, which leads to `r length(apri$AssocRules)` association rules with high confidence. These can be seen in Table \ref{tab:assocsets}.
+
+```{r Aprori-Sets, cache=FALSE, warning = FALSE}
+source("../Report 3/AprioriFormat.R")
+ItemSets <- AprioriSetFormat(apri$FreqItemSets)
+kable( ItemSets, caption=paste("\\label{tab:itemsets}The item sets discovered using the Apriori algorithm with a support of at least",minsupp,"%.") )
+```
+
+```{r Apriori-Associations, cache=FALSE, fig.pos='p'}
+AssocSets <- AprioriAssocFormat(apri$AssocRules)
+kable( AssocSets, caption=paste("\\label{tab:assocsets}The association sets discovered using the Apriori algorithm with a confidence of at least",minconf,"%."))
+```
+
+The first `r sum(str_detect(apri$AssocRules, fixed("<- [") ))` association rules are identical to the identified item sets with a only one item. The association rules, where one item implies another item, are doubled in the sense that if A implies B is a rule, then B implies A is another rule.
+
+Note that some of the discovered association rules (`r AssocSets[["Rule #"]][as.numeric(sub(" %","",as.character(AssocSets$Confidence)))<80]`) have a confidence below the minimum confidence.
+
+Generally, the discovered association rules represent the most common cars, meaning having a front-located engine, four cylinders or above, no turbo and running on gas, not diesel. 

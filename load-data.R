@@ -1,17 +1,5 @@
-#### helper for HP clusters
-powerclass <- function(hp){
-  if (is.na(hp))
-    return(4)
-  if (hp < 60) 
-    return(0)
-  if (hp < 120)
-    return(1)
-  if (hp < 160)
-    return(2)
-  return(3)
-}
 
-loaddata <- function(normalise = FALSE, removeNAs = FALSE, oneofKenc = FALSE, mycols = NA, datadir = "../Project") {
+loaddata <- function(normalise = FALSE, removeNAs = FALSE, oneofKenc = FALSE, binarize = FALSE, mycols = NA, datadir = "../Project") {
   #### Read data and attribute names ####
   # source('setup.R')
   names <- readLines(paste0(datadir, "/names.txt"))
@@ -22,44 +10,63 @@ loaddata <- function(normalise = FALSE, removeNAs = FALSE, oneofKenc = FALSE, my
     names <- names(dat)
   }
   
+  X <- dat
   ## Calculate number of NAs in each column
-  NAs <- colSums(is.na(dat))
+  NAs <- colSums(is.na(X))
   # Find columns containing numeric data
-  numericcols <- !sapply(dat, is.factor)
+  numericcols <- !sapply(X, is.factor)
   # Calculate average values
-  means <- numeric(0); means[numericcols] <- colMeans(dat[numericcols], na.rm = TRUE)
+  means <- numeric(0); means[numericcols] <- colMeans(X[numericcols], na.rm = TRUE)
   
   ## Convert cylinders and doors to numbers
   nums <- c("one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve")
   if(all(is.na(mycols)) || any(mycols == "num-of-cylinders")) {
-    dat[["num-of-cylinders"]] <- match(dat[["num-of-cylinders"]], nums)
+    X[["num-of-cylinders"]] <- match(X[["num-of-cylinders"]], nums)
   }
   if(all(is.na(mycols)) || any(mycols == "num-of-doors")) {
-    dat[["num-of-doors"]] <- match(dat[["num-of-doors"]], nums)
+    X[["num-of-doors"]] <- match(X[["num-of-doors"]], nums)
   }
-  
-  #classify horsepower
-  powerclass <- lapply(dat$horsepower, powerclass)
   
   ## Normalise with standardize(X)
   if(normalise) {
     # Substract mean and divide by standard deviation column-wise. Return list
-    l <- lapply(dat, function(x) {if(is.factor(x)){ x } else { (x - mean(x, na.rm = TRUE))/sd(x, na.rm = TRUE) }})
+    l <- lapply(X, function(x) {if(is.factor(x)){ x } else { (x - mean(x, na.rm = TRUE))/sd(x, na.rm = TRUE) }})
     # Convert returned list to data frame
-    dat <- do.call(rbind.data.frame, args = list(l, "make.row.names" = FALSE))
-    colnames(dat)<-names
+    X <- do.call(rbind.data.frame, args = list(l, "make.row.names" = FALSE))
+    colnames(X)<-names
   }
   
   if(removeNAs && !normalise) {
     for (i in which(as.logical(NAs))) {
       # If not numeric, set NAs as the mode of the vector
-      dat[is.na(dat[i]), i] <- ifelse(numericcols[i], mean(dat[[i]], na.rm = TRUE), names(which.max(table(dat[[i]]))))
+      X[is.na(X[i]), i] <- ifelse(numericcols[i], mean(X[[i]], na.rm = TRUE), names(which.max(table(X[[i]]))))
     }
   } else if(removeNAs) {
     # If the data is already standardised, the mean is just 0
     for (i in which(as.logical(NAs))) {
       # If not numeric, set NAs as the mode of the vector
-      dat[is.na(dat[i]), i] <- ifelse(numericcols[i], 0, names(which.max(table(dat[[i]]))))
+      X[is.na(X[i]), i] <- ifelse(numericcols[i], 0, names(which.max(table(X[[i]]))))
+    }
+  }
+  if(all(is.na(mycols)) || any(mycols == "num-of-doors")) {
+    X[["num-of-doors"]] <- as.integer(X[["num-of-doors"]])
+  }
+  if(binarize) {
+    numericcols <- !sapply(X, is.factor)
+    for(col in names(numericcols)[numericcols == TRUE]) {
+      med  <- median(X[[col]])
+      
+      low  <- numeric(nrow(X))
+      low[X[[col]] < med]  <- 1
+      high <- numeric(nrow(X))
+      high[X[[col]] >= med]  <- 1
+      
+      lowname  <- paste0(col, ".low")
+      highname <- paste0(col, ".high")
+      X[[lowname]]  <- low
+      X[[highname]] <- high
+      
+      X[[col]] <- NULL
     }
   }
   
@@ -67,27 +74,24 @@ loaddata <- function(normalise = FALSE, removeNAs = FALSE, oneofKenc = FALSE, my
   if(oneofKenc) {
     atts <- c("make", "fuel-type", "aspiration", "body-style", "drive-wheels", "engine-location", "engine-type", "fuel-system")
     for (att in atts) {
-      if(!any(names(dat) == att)) {
+      if(!any(names(X) == att)) {
         #warning("'", att, "' not found. Skipping attribute...") 
       } else {
-        facs <- names(table(dat[[att]]))
-        k = 1/sqrt(length(facs))  # Normalise to number of columns
+        facs <- names(table(X[[att]]))
+        if(binarize) {
+          k = 1
+        } else {
+          k = 1/sqrt(length(facs))  # Normalise to number of columns
+        }
         for (f in facs) {
           newatt <- paste(att, f, sep = ".")
-          dat[[newatt]] <- as.integer(dat[[att]] == f) * k
+          X[[newatt]] <- as.integer(X[[att]] == f) * k
         }
-        dat[[att]] <- NULL
+        X[[att]] <- NULL
       }
     }
   }
-  if(all(is.na(mycols)) || any(mycols == "num-of-doors")) {
-    dat[["num-of-doors"]] <- as.integer(dat[["num-of-doors"]])
-  }
-  
-  # add the powerclass column
-  dat$powerclass=unlist(powerclass)
-  
-  list(dat, names, NAs)
+  list(dat, X, names, NAs)
 }
 ':=' <- function(lhs, rhs) {
   frame <- parent.frame()
