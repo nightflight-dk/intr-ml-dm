@@ -1,3 +1,15 @@
+#### helper for HP clusters
+powerclass <- function(hp){
+  if (is.na(hp))
+    return(4)
+  if (hp < 60) 
+    return(0)
+  if (hp < 120)
+    return(1)
+  if (hp < 160)
+    return(2)
+  return(3)
+}
 
 loaddata <- function(normalise = FALSE, removeNAs = FALSE, oneofKenc = FALSE, binarize = FALSE, mycols = NA, datadir = "../Project") {
   #### Read data and attribute names ####
@@ -26,6 +38,9 @@ loaddata <- function(normalise = FALSE, removeNAs = FALSE, oneofKenc = FALSE, bi
   if(all(is.na(mycols)) || any(mycols == "num-of-doors")) {
     X[["num-of-doors"]] <- match(X[["num-of-doors"]], nums)
   }
+  
+  #classify horsepower
+  powerclass <- lapply(dat$horsepower, powerclass)
   
   ## Normalise with standardize(X)
   if(normalise) {
@@ -91,6 +106,10 @@ loaddata <- function(normalise = FALSE, removeNAs = FALSE, oneofKenc = FALSE, bi
       }
     }
   }
+  
+  # add the powerclass column
+  dat$powerclass=unlist(powerclass)
+  
   list(dat, X, names, NAs)
 }
 ':=' <- function(lhs, rhs) {

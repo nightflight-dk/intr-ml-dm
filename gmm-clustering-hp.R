@@ -7,11 +7,9 @@ library(mclust) # install.packages("mclust") # package that can be used to fit a
 
 graphics.off()
 
-cars <- data.frame(dat)
+c(dat, X, names, NAs) := loaddata(normalise = TRUE, removeNAs = TRUE, oneofKenc = TRUE, datadir="data")
 
-X <- cars
-y <- cars$powerclass
-X <- cars[,!(names(cars) == "powerclass")]
+y <- dat$powerclass
 N <- nrow(cars)
 M <- length(X)
 
@@ -40,3 +38,5 @@ Xc = t(model$parameters$mean) # using the mclust package
 ## Plot results
 # Plot clustering
 clusterplot(Xdf, y, i, Xc, main='GMM: Clustering');
+
+classError(i, y)
