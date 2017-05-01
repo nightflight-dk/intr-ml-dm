@@ -1,13 +1,17 @@
+setwd("02450Toolbox_R")
 source("setup.R")
+setwd("..")
+source("load-data.R")
 
 library(R.matlab)
+library(mixtools)
 library(nnet)
 library(cvTools)
 library(mclust) # install.packages("mclust") # package that can be used to fit a gaussian mixture model. This package does not allow random starts of the algorithm. It is faster than the algorithm in mixtools.
 
 graphics.off()
 
-c(dat, X, names, NAs) := loaddata(normalise = TRUE, removeNAs = TRUE, oneofKenc = TRUE)
+c(dat, X, names, NAs) := loaddata(normalise = TRUE, removeNAs = TRUE, oneofKenc = TRUE, datadir="data")
 
 cars <- data.frame(X)
 
@@ -119,7 +123,7 @@ for(t in 1:T){
 }
 
 ## Plot results
-pdf("../GMM-crossval.pdf",width = 6, height = 4.5)
+pdf("../GMM-crossval2.pdf",width = 6, height = 4.5)
 cols <- c('blue', 'darkgreen', 'red')
 miny <- min(c(BIC, AIC, 2*CVE))
 maxy <- max(c(BIC, AIC, 2*CVE))

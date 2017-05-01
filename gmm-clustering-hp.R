@@ -1,4 +1,5 @@
 source("setup.R")
+source("load-data.R")
 
 library(R.matlab)
 library(nnet)
@@ -21,7 +22,7 @@ colnames(Xdf) <- attributeNames
 ## Gaussian mixture model
 
 # Number of clusters
-K = 4; #minimum value is 2
+K = 5; #minimum value is 2
 
 # Fit model
 model <- mclust::Mclust(data=Xdf, G=K) # using the mclust package
